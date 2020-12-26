@@ -7,7 +7,7 @@ EASY FOR DEBUG AND TEST
 - FILE
     - OPEN
         - FOLDER
-        開啟資料夾所有圖片做處理
+        開啟資料夾內所有圖片做處理
         - FILE
         開啟單張圖片做處理
     - SAVE
