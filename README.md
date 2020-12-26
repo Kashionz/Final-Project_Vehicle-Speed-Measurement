@@ -7,9 +7,9 @@ EASY FOR DEBUG AND TEST
 - FILE
     - OPEN
         - FOLDER
-        開啟資料夾內所有圖片做處理
+        開啟資料夾內所有圖片並存放到ListBox
         - FILE
-        開啟單張圖片做處理
+        開啟單張圖片
     - SAVE
     儲存處理後的圖片
     - EXIT
@@ -23,3 +23,6 @@ EASY FOR DEBUG AND TEST
 - EXPORT
     - EXCEL
     輸出資料至EXCEL
+
+- LISTBOX FUNCTION
+    - 假如ListBox內有選項（圖片路徑），則可以點擊選項直接查看圖片和處理後的圖片
