@@ -13,11 +13,13 @@ EASY FOR DEBUG AND TEST
     - SAVE
     儲存處理後的圖片
     - EXIT
+    
 - DETECTION
     - VEHICLE
     觀測車子的動態變化
     - SPEED
     車速偵測
+
 - EXPORT
     - EXCEL
     輸出資料至EXCEL
