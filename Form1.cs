@@ -15,6 +15,8 @@ namespace Final_Project_Vehicle_Speed_Measurement
 {
     public partial class Form1 : Form
     {
+        Form2 settings = new Form2();
+
         EImageC24 EC24Image1 = new EImageC24(); //eVision的彩色圖像物件
         EImageC24 EC24Image2 = new EImageC24(); // EImageC24 instance
         EImageBW8 EBW8Image1 = new EImageBW8(); //eVision的灰階圖像物件
@@ -41,7 +43,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
 
         private void folderToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            folderBrowserDialog1.SelectedPath = Application.StartupPath;
+            folderBrowserDialog1.SelectedPath = "C:\\Users\\Teamate\\Desktop\\畢業專題\\測試資料";
             FileListBox.Items.Clear();
 
             if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
@@ -166,7 +168,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 EasyImage.Convert(EC24Image1, EBW8Image1); //轉灰階
 
                 cannyEdgeDetector1.HighThreshold = 1.00f;
-                cannyEdgeDetector1.LowThreshold = 0.10f;
+                cannyEdgeDetector1.LowThreshold = 0.20f;
                 cannyEdgeDetector1.Apply(EBW8Image1, EBW8Image1);
 
                 EBW8Image1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
@@ -204,8 +206,8 @@ namespace Final_Project_Vehicle_Speed_Measurement
             EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), EBW8Image1);
             EasyImage.Convert(EC24Image1, EBW8Image1); //轉灰階
 
-            cannyEdgeDetector1.HighThreshold = 1.00f;
-            cannyEdgeDetector1.LowThreshold = 0.10f;
+            cannyEdgeDetector1.HighThreshold = settings.set_value_1();
+            cannyEdgeDetector1.LowThreshold = settings.set_value_2();
             cannyEdgeDetector1.Apply(EBW8Image1, EBW8Image1);
 
             EBW8Image1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
@@ -226,6 +228,36 @@ namespace Final_Project_Vehicle_Speed_Measurement
 
             if (saveFileDialog1.ShowDialog() == DialogResult.OK && saveFileDialog1.FileName != "")
                 EBW8Image1.Save(saveFileDialog1.FileName, EImageFileType.Jpeg);
+        }
+
+        private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            settings.Show();
+        }
+
+        private void grayToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            for (int i = 0; i < FileListBox.Items.Count; i++)
+            {
+                FileListBox.SelectedItem = i;
+                FileListBox.Refresh();
+                EC24Image1.Load(files[i]);
+                EBW8Image1.SetSize(EC24Image1);
+                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), EBW8Image1);
+                EasyImage.Convert(EC24Image1, EBW8Image1);
+
+                string path = settings.set_path() + "\\" + Path.GetFileName(files[i]);
+
+                if (!Directory.Exists(settings.set_path()))
+                    Directory.CreateDirectory(settings.set_path());
+
+                EBW8Image1.SaveJpeg(path);
+            }
+        }
+
+        private void folderBrowserDialog1_HelpRequest(object sender, EventArgs e)
+        {
+
         }
     }
 }

@@ -16,5 +16,25 @@ namespace Final_Project_Vehicle_Speed_Measurement
         {
             InitializeComponent();
         }
+
+        private void Form2_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        public float set_value_1()
+        {
+            return float.Parse(textBox1.Text);
+        }
+
+        public float set_value_2()
+        {
+            return float.Parse(textBox2.Text);
+        }
+
+        public string set_path()
+        {
+            return textBox3.Text;
+        }
     }
 }
