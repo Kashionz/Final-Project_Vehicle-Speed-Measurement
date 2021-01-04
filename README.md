@@ -24,7 +24,7 @@ EASY FOR DEBUG AND TEST
     - EXCEL
     輸出資料至EXCEL
     - GRAY
-    將圖片轉成灰階並存到測試資料內的GRAY目錄，假如GRAY目錄不存在會自動創建
+    將圖片轉成灰階並存到測試資料目錄內的GRAY目錄，假如GRAY目錄不存在會自動創建
 
 - LISTBOX FUNCTION
     - 假如ListBox內有選項（圖片路徑），則可以點擊選項直接查看圖片和處理後的圖片
