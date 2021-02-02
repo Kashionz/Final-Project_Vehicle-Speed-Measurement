@@ -17,11 +17,12 @@ namespace Final_Project_Vehicle_Speed_Measurement
     {
         Form2 settings = new Form2();
 
-        EImageC24 EC24Image1 = new EImageC24(); //eVision的彩色圖像物件
-        EImageC24 EC24Image2 = new EImageC24(); // EImageC24 instance
-        EImageBW8 EBW8Image1 = new EImageBW8(); //eVision的灰階圖像物件
-        
-        ECannyEdgeDetector cannyEdgeDetector1 = new ECannyEdgeDetector(); // ECannyEdgeDetector instance
+        EImageC24 OriginalImg1 = new EImageC24(); //eVision的彩色圖像物件
+        EImageC24 OriginalImg2 = new EImageC24(); // EImageC24 instance
+        EImageC24 Background = new EImageC24(); //eVision的灰階圖像物件
+        EImageBW8 GrayImg1 = new EImageBW8(); //eVision的灰階圖像物件
+        EImageBW8 GrayImg2 = new EImageBW8(); //eVision的灰階圖像物件
+        EImageBW8 BackgroundGray = new EImageBW8(); //eVision的灰階圖像物件
 
         EColorLookup EColorLookup1 = new EColorLookup(); // EColorLookup instance
 
@@ -31,6 +32,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
         string[] files;
 
         float ScalingRatio = 0; //Picturebox與原始影像大小的縮放比例
+        bool selecting = false;
 
         static Excel.Application Excel_APP1 = new Excel.Application();
         Excel.Workbook Excel_WB1 = Excel_APP1.Workbooks.Add();
@@ -43,7 +45,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
 
         private void folderToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            folderBrowserDialog1.SelectedPath = "C:\\Users\\Teamate\\Desktop\\畢業專題\\測試資料";
+            folderBrowserDialog1.SelectedPath = "C:\\Users\\kashi\\Desktop\\畢業專題\\測試資料\\";
             FileListBox.Items.Clear();
 
             if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
@@ -67,23 +69,23 @@ namespace Final_Project_Vehicle_Speed_Measurement
             Excel_APP1.Cells[2, 1] = "Profile下";
             Excel_APP1.Cells[3, 1] = "Profile上";
 
-            EC24Image1.Load(files[0]);
+            OriginalImg1.Load(files[0]);
 
             /*============================計算scaling ratio============================*/
             float PictureBoxSizeRatio = (float)pbImg1.Width / pbImg1.Height;
-            float ImageSizeRatio = (float)EC24Image1.Width / EC24Image1.Height;
+            float ImageSizeRatio = (float)OriginalImg1.Width / OriginalImg1.Height;
             if (ImageSizeRatio > PictureBoxSizeRatio)
-                ScalingRatio = (float)pbImg1.Width / EC24Image1.Width;
+                ScalingRatio = (float)pbImg1.Width / OriginalImg1.Width;
             else
-                ScalingRatio = (float)pbImg1.Height / EC24Image1.Height;
+                ScalingRatio = (float)pbImg1.Height / OriginalImg1.Height;
             /*=========================================================================*/
 
             for (int i = 0; i < FileListBox.Items.Count; i++)
             {
                 FileListBox.SelectedIndex = i;
                 FileListBox.Refresh();
-                EC24Image1.Load(files[i]);
-                EC24Image1.Draw(pbImg1.CreateGraphics(), ScalingRatio);
+                OriginalImg1.Load(files[i]);
+                OriginalImg1.Draw(pbImg1.CreateGraphics(), ScalingRatio);
 
                 //EC24Image2.SetSize(EC24Image1);
                 //EasyImage.Oper(EArithmeticLogicOperation.Copy, new EC24(0, 0, 0), EC24Image2);
@@ -94,24 +96,24 @@ namespace Final_Project_Vehicle_Speed_Measurement
 
                 //EC24Image2.Draw(pbImg2.CreateGraphics(), ScalingRatio);
 
-                EBW8Image1.SetSize(EC24Image1);
-                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), EBW8Image1);
-                EasyImage.Convert(EC24Image1, EBW8Image1); //轉灰階
+                GrayImg1.SetSize(OriginalImg1);
+                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
+                EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
 
-                cannyEdgeDetector1.HighThreshold = 1.00f;
-                cannyEdgeDetector1.LowThreshold = 0.20f;
-                cannyEdgeDetector1.Apply(EBW8Image1, EBW8Image1);
+                EasyImage.Oper(EArithmeticLogicOperation.Subtract, GrayImg1, BackgroundGray, GrayImg1);
+                EasyImage.Threshold(GrayImg1, GrayImg1, 56);
+                EasyImage.OpenBox(GrayImg1, GrayImg1, settings.set_value_3());
 
-                EBW8Image1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
+                GrayImg1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
 
-                EasyImage.ImageToLineSegment(EBW8Image1, In, 1000, 1079, 1750, 1079); //設定偵測線在最底部，判斷車子是否準備進來
-                EasyImage.ImageToLineSegment(EBW8Image1, Out, 1000, 0, 1750, 0); //設定偵測線在最頂部，判斷車子是否準備出去
+                EasyImage.ImageToLineSegment(GrayImg1, In, 1000, 600, 1750, 600); //設定偵測線在最底部，判斷車子是否準備進來
+                EasyImage.ImageToLineSegment(GrayImg1, Out, 1000, 500, 1750, 500); //設定偵測線在最頂部，判斷車子是否準備出去
 
                 Excel_APP1.Cells[1, 2 + i] = Path.GetFileNameWithoutExtension(files[i]);
                 Excel_APP1.Cells[2, 2 + i] = getProfileValuesSum(In);
                 Excel_APP1.Cells[3, 2 + i] = getProfileValuesSum(Out);
 
-                Console.WriteLine(files[i]);
+                //Console.WriteLine(files[i]);
             }
 
             if (saveFileDialog1.ShowDialog() == DialogResult.OK && saveFileDialog1.FileName != "")
@@ -127,32 +129,67 @@ namespace Final_Project_Vehicle_Speed_Measurement
         private double getProfileValuesSum(EBW8Vector eBW8) //Profile線上的值相加起來
         {
             double sum = 0;
+
             for (int i = 0; i < eBW8.NumElements; i++)
             {
                 sum += eBW8.GetElement(i).Value;
             }
+
             return sum;
         }
 
         private void vehicleToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            EC24Image1.Load(files[0]);
+            float PictureBoxSizeRatio, ImageSizeRatio;
+
+            OriginalImg1.Load(files[0]);
 
             /*============================計算scaling ratio============================*/
-            float PictureBoxSizeRatio = (float)pbImg1.Width / pbImg1.Height;
-            float ImageSizeRatio = (float)EC24Image1.Width / EC24Image1.Height;
+            PictureBoxSizeRatio = (float)pbImg1.Width / pbImg1.Height;
+            ImageSizeRatio = (float)OriginalImg1.Width / OriginalImg1.Height;
             if (ImageSizeRatio > PictureBoxSizeRatio)
-                ScalingRatio = (float)pbImg1.Width / EC24Image1.Width;
+                ScalingRatio = (float)pbImg1.Width / OriginalImg1.Width;
             else
-                ScalingRatio = (float)pbImg1.Height / EC24Image1.Height;
+                ScalingRatio = (float)pbImg1.Height / OriginalImg1.Height;
             /*=========================================================================*/
 
             for (int i = 0; i < FileListBox.Items.Count; i++)
             {
                 FileListBox.SelectedIndex = i;
                 FileListBox.Refresh();
-                EC24Image1.Load(files[i]);
-                EC24Image1.Draw(pbImg1.CreateGraphics(), ScalingRatio);
+                OriginalImg1.Load(files[i]);
+                OriginalImg1.Draw(pbImg1.CreateGraphics(), ScalingRatio);
+
+                GrayImg1.SetSize(OriginalImg1);
+                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
+                EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
+
+                EasyImage.Oper(EArithmeticLogicOperation.Subtract, GrayImg1, BackgroundGray, GrayImg1);
+                EasyImage.Threshold(GrayImg1, GrayImg1, 56);
+
+                GrayImg1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
+
+                Console.WriteLine(files[i]);
+            }
+        }
+
+        private void FileListBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (selecting)
+            {
+                OriginalImg1.Load(files[0]);
+
+                //============================計算scaling ratio============================
+                float PictureBoxSizeRatio = (float)pbImg1.Width / pbImg1.Height;
+                float ImageSizeRatio = (float)OriginalImg1.Width / OriginalImg1.Height;
+                if (ImageSizeRatio > PictureBoxSizeRatio)
+                    ScalingRatio = (float)pbImg1.Width / OriginalImg1.Width;
+                else
+                    ScalingRatio = (float)pbImg1.Height / OriginalImg1.Height;
+                //=========================================================================
+
+                OriginalImg1.Load(files[FileListBox.SelectedIndex]);
+                OriginalImg1.Draw(pbImg1.CreateGraphics(), ScalingRatio);
 
                 //EC24Image2.SetSize(EC24Image1);
                 //EasyImage.Oper(EArithmeticLogicOperation.Copy, new EC24(0, 0, 0), EC24Image2);
@@ -163,56 +200,18 @@ namespace Final_Project_Vehicle_Speed_Measurement
 
                 //EC24Image2.Draw(pbImg2.CreateGraphics(), ScalingRatio);
 
-                EBW8Image1.SetSize(EC24Image1);
-                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), EBW8Image1);
-                EasyImage.Convert(EC24Image1, EBW8Image1); //轉灰階
+                GrayImg1.SetSize(OriginalImg1);
+                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
+                EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
 
-                cannyEdgeDetector1.HighThreshold = 1.00f;
-                cannyEdgeDetector1.LowThreshold = 0.20f;
-                cannyEdgeDetector1.Apply(EBW8Image1, EBW8Image1);
+                EasyImage.Oper(EArithmeticLogicOperation.Subtract, GrayImg1, BackgroundGray, GrayImg1);
+                EasyImage.Threshold(GrayImg1, GrayImg1);
+                EasyImage.OpenBox(GrayImg1, GrayImg1, settings.set_value_3());
 
-                EBW8Image1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
+                GrayImg1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
 
-                Console.WriteLine(files[i]);
+                Console.WriteLine(files[FileListBox.SelectedIndex]);
             }
-        }
-
-        private void FileListBox_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            EC24Image1.Load(files[0]);
-
-            /*============================計算scaling ratio============================*/
-            float PictureBoxSizeRatio = (float)pbImg1.Width / pbImg1.Height;
-            float ImageSizeRatio = (float)EC24Image1.Width / EC24Image1.Height;
-            if (ImageSizeRatio > PictureBoxSizeRatio)
-                ScalingRatio = (float)pbImg1.Width / EC24Image1.Width;
-            else
-                ScalingRatio = (float)pbImg1.Height / EC24Image1.Height;
-            /*=========================================================================*/
-
-            EC24Image1.Load(files[FileListBox.SelectedIndex]);
-            EC24Image1.Draw(pbImg1.CreateGraphics(), ScalingRatio);
-
-            //EC24Image2.SetSize(EC24Image1);
-            //EasyImage.Oper(EArithmeticLogicOperation.Copy, new EC24(0, 0, 0), EC24Image2);
-
-            //EC24Image1.ColorSystem = EColorSystem.Rgb;
-            //EColorLookup1.ConvertFromRgb(EColorSystem.Yiq);
-            //EColorLookup1.Transform(EC24Image1, EC24Image2);
-
-            //EC24Image2.Draw(pbImg2.CreateGraphics(), ScalingRatio);
-
-            EBW8Image1.SetSize(EC24Image1);
-            EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), EBW8Image1);
-            EasyImage.Convert(EC24Image1, EBW8Image1); //轉灰階
-
-            cannyEdgeDetector1.HighThreshold = settings.set_value_1();
-            cannyEdgeDetector1.LowThreshold = settings.set_value_2();
-            cannyEdgeDetector1.Apply(EBW8Image1, EBW8Image1);
-
-            EBW8Image1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
-
-            Console.WriteLine(files[FileListBox.SelectedIndex]);
         }
 
         private void excelToolStripMenuItem1_Click(object sender, EventArgs e)
@@ -227,7 +226,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
             saveFileDialog1.Title = "Save the Picture";
 
             if (saveFileDialog1.ShowDialog() == DialogResult.OK && saveFileDialog1.FileName != "")
-                EBW8Image1.Save(saveFileDialog1.FileName, EImageFileType.Jpeg);
+                GrayImg1.Save(saveFileDialog1.FileName, EImageFileType.Jpeg);
         }
 
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -241,23 +240,82 @@ namespace Final_Project_Vehicle_Speed_Measurement
             {
                 FileListBox.SelectedItem = i;
                 FileListBox.Refresh();
-                EC24Image1.Load(files[i]);
-                EBW8Image1.SetSize(EC24Image1);
-                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), EBW8Image1);
-                EasyImage.Convert(EC24Image1, EBW8Image1);
+                OriginalImg1.Load(files[i]);
+                GrayImg1.SetSize(OriginalImg1);
+                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
+                EasyImage.Convert(OriginalImg1, GrayImg1);
 
                 string path = settings.set_path() + "\\" + Path.GetFileName(files[i]);
 
                 if (!Directory.Exists(settings.set_path()))
                     Directory.CreateDirectory(settings.set_path());
 
-                EBW8Image1.SaveJpeg(path);
+                GrayImg1.SaveJpeg(path);
             }
+
+            MessageBox.Show("灰階化轉換完成", "通知");
         }
 
         private void folderBrowserDialog1_HelpRequest(object sender, EventArgs e)
         {
 
+        }
+
+        private void yIQToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            for (int i = 0; i < FileListBox.Items.Count; i++)
+            {
+                FileListBox.SelectedItem = i;
+                FileListBox.Refresh();
+                OriginalImg1.Load(files[i]);
+
+                OriginalImg2.SetSize(OriginalImg1);
+                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EC24(0, 0, 0), OriginalImg2);
+
+                OriginalImg1.ColorSystem = EColorSystem.Rgb;
+                EColorLookup1.ConvertFromRgb(EColorSystem.Yiq);
+                EColorLookup1.Transform(OriginalImg1, OriginalImg2);
+
+                //EC24Image2.Draw(pbImg2.CreateGraphics(), ScalingRatio);
+
+                string path = settings.set_path() + "\\" + Path.GetFileName(files[i]);
+
+                if (!Directory.Exists(settings.set_path()))
+                    Directory.CreateDirectory(settings.set_path());
+
+                OriginalImg2.SaveJpeg(path);
+            }
+
+            MessageBox.Show("YIQ轉換完成", "通知");
+        }
+
+        private void backgroundToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            float PictureBoxSizeRatio, ImageSizeRatio;
+
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                Background.Load(openFileDialog1.FileName);
+                PictureBoxSizeRatio = (float)pbImg3.Width / pbImg3.Height;
+                ImageSizeRatio = (float)Background.Width / Background.Height;
+                if (ImageSizeRatio > PictureBoxSizeRatio)
+                    ScalingRatio = (float)pbImg3.Width / Background.Width;
+                else
+                    ScalingRatio = (float)pbImg3.Height / Background.Height;
+
+                //顯示影像於Picturebox
+                pbImg3.Refresh(); //先清除目前圖像
+                Background.Draw(pbImg3.CreateGraphics(), ScalingRatio); //再繪製上去
+            }
+
+            BackgroundGray.SetSize(Background);
+            EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), BackgroundGray);
+            EasyImage.Convert(Background, BackgroundGray); //轉灰階
+        }
+
+        private void selectionToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            selecting = true;
         }
     }
 }

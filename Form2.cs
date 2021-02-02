@@ -31,10 +31,24 @@ namespace Final_Project_Vehicle_Speed_Measurement
         {
             return float.Parse(textBox2.Text);
         }
+        public uint set_value_3()
+        {
+            return uint.Parse(textBox4.Text);
+        }
+
+        public uint set_value_4()
+        {
+            return uint.Parse(textBox5.Text);
+        }
 
         public string set_path()
         {
             return textBox3.Text;
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }
