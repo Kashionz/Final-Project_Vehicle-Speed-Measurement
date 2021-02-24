@@ -29,6 +29,10 @@ namespace Final_Project_Vehicle_Speed_Measurement
         EBW8Vector In = new EBW8Vector(); // EBW8Vector instance
         EBW8Vector Out = new EBW8Vector(); // EBW8Vector instance
 
+        ECodedImage2 codedImage1 = new ECodedImage2(); // ECodedImage2 instance
+        EImageEncoder codedImage1Encoder = new EImageEncoder(); // EImageEncoder instance
+        EObjectSelection codedImage1ObjectSelection = new EObjectSelection(); // EObjectSelection instance
+
         string[] files;
 
         float ScalingRatio = 0; //Picturebox與原始影像大小的縮放比例
@@ -141,6 +145,13 @@ namespace Final_Project_Vehicle_Speed_Measurement
         private void vehicleToolStripMenuItem_Click(object sender, EventArgs e)
         {
             float PictureBoxSizeRatio, ImageSizeRatio;
+            ECodedElement result;
+
+            codedImage1ObjectSelection.FeretAngle = 0.00f;
+            codedImage1Encoder.GrayscaleSingleThresholdSegmenter.WhiteLayerEncoded = true;
+            codedImage1Encoder.GrayscaleSingleThresholdSegmenter.BlackLayerEncoded = false;
+            codedImage1Encoder.SegmentationMethod = ESegmentationMethod.GrayscaleSingleThreshold;
+            codedImage1Encoder.GrayscaleSingleThresholdSegmenter.Mode = EGrayscaleSingleThreshold.MinResidue;
 
             OriginalImg1.Load(files[0]);
 
@@ -164,8 +175,24 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
                 EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
 
+                EasyImage.Median(BackgroundGray, BackgroundGray);
+                EasyImage.Median(GrayImg1, GrayImg1);
                 EasyImage.Oper(EArithmeticLogicOperation.Subtract, GrayImg1, BackgroundGray, GrayImg1);
-                EasyImage.Threshold(GrayImg1, GrayImg1, 56);
+
+                EasyImage.Threshold(GrayImg1, GrayImg1, unchecked((uint)EThresholdMode.MinResidue));
+
+                EasyImage.ErodeBox(GrayImg1, GrayImg1, 1); //侵蝕
+                EasyImage.CloseBox(GrayImg1, GrayImg1, 10); //閉合
+
+                codedImage1ObjectSelection.FeretAngle = 0.00f;
+                codedImage1Encoder.Encode(GrayImg1, codedImage1);
+                codedImage1ObjectSelection.Clear();
+                codedImage1ObjectSelection.AddObjects(codedImage1);
+                codedImage1ObjectSelection.AttachedImage = GrayImg1;
+                codedImage1ObjectSelection.RemoveUsingUnsignedIntegerFeature(EFeature.RunCount, 1000, ESingleThresholdMode.Less); //移除RunCount小於1000的物件
+                Console.WriteLine(codedImage1ObjectSelection.ElementCount); //看result的數量
+
+                codedImage1.DrawFeature(pbImg1.CreateGraphics(), EDrawableFeature.BoundingBox, codedImage1ObjectSelection, ScalingRatio); // 把車的框框畫出來
 
                 GrayImg1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
 
@@ -191,22 +218,18 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 OriginalImg1.Load(files[FileListBox.SelectedIndex]);
                 OriginalImg1.Draw(pbImg1.CreateGraphics(), ScalingRatio);
 
-                //EC24Image2.SetSize(EC24Image1);
-                //EasyImage.Oper(EArithmeticLogicOperation.Copy, new EC24(0, 0, 0), EC24Image2);
-
-                //EC24Image1.ColorSystem = EColorSystem.Rgb;
-                //EColorLookup1.ConvertFromRgb(EColorSystem.Yiq);
-                //EColorLookup1.Transform(EC24Image1, EC24Image2);
-
-                //EC24Image2.Draw(pbImg2.CreateGraphics(), ScalingRatio);
-
                 GrayImg1.SetSize(OriginalImg1);
                 EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
                 EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
 
+                EasyImage.Median(BackgroundGray, BackgroundGray);
+                EasyImage.Median(GrayImg1, GrayImg1);
                 EasyImage.Oper(EArithmeticLogicOperation.Subtract, GrayImg1, BackgroundGray, GrayImg1);
-                EasyImage.Threshold(GrayImg1, GrayImg1);
-                EasyImage.OpenBox(GrayImg1, GrayImg1, settings.set_value_3());
+
+                EasyImage.Threshold(GrayImg1, GrayImg1, unchecked((uint)EThresholdMode.MinResidue));
+
+                EasyImage.ErodeBox(GrayImg1, GrayImg1, 1); //侵蝕
+                EasyImage.CloseBox(GrayImg1, GrayImg1, 10); //閉合
 
                 GrayImg1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
 
@@ -315,7 +338,16 @@ namespace Final_Project_Vehicle_Speed_Measurement
 
         private void selectionToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            selecting = true;
+            if (selecting)
+                selecting = false;
+            else
+                selecting = true;
+        }
+
+        private void clearToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            codedImage1ObjectSelection.Clear();
+            pbImg1.Refresh();
         }
     }
 }
