@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Emgu.CV;
+using Emgu.CV.CvEnum;
 using Euresys.Open_eVision_2_12;
 using Excel = Microsoft.Office.Interop.Excel;
 
@@ -32,6 +35,12 @@ namespace Final_Project_Vehicle_Speed_Measurement
         ECodedImage2 codedImage1 = new ECodedImage2(); // ECodedImage2 instance
         EImageEncoder codedImage1Encoder = new EImageEncoder(); // EImageEncoder instance
         EObjectSelection codedImage1ObjectSelection = new EObjectSelection(); // EObjectSelection instance
+
+        BitmapData bmpData = null;
+        Bitmap bitmap = null;
+
+        Capture video;
+        bool play = false;
 
         string[] files;
 
@@ -331,11 +340,11 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 //顯示影像於Picturebox
                 pbImg3.Refresh(); //先清除目前圖像
                 Background.Draw(pbImg3.CreateGraphics(), ScalingRatio); //再繪製上去
-            }
 
-            BackgroundGray.SetSize(Background);
-            EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), BackgroundGray);
-            EasyImage.Convert(Background, BackgroundGray); //轉灰階
+                BackgroundGray.SetSize(Background);
+                EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), BackgroundGray);
+                EasyImage.Convert(Background, BackgroundGray); //轉灰階
+            }
         }
 
         private void selectionToolStripMenuItem_Click(object sender, EventArgs e)
@@ -350,6 +359,162 @@ namespace Final_Project_Vehicle_Speed_Measurement
         {
             codedImage1ObjectSelection.Clear();
             pbImg1.Refresh();
+        }
+
+        private void videoToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            play = false;
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                video = new Capture(openFileDialog1.FileName); //讀影片
+                Mat m = video.QueryFrame(); //擷取影片frame
+                pbImg1.Image = m.Bitmap; //顯示該frame，當預覽圖
+            }
+        }
+
+        private async void videoPlayToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (video == null) return;
+
+            if (!play)
+            {
+                play = true;
+                videoPlayToolStripMenuItem.Text = "VideoPause";
+            }
+            else
+            {
+                play = false;
+                videoPlayToolStripMenuItem.Text = "VideoPlay";
+            }
+
+            try
+            {
+                while (play)
+                {
+                    Mat frame = new Mat();
+                    frame = video.QueryFrame(); //擷取影片frame
+                    if (frame == null) break;
+
+                    //pbImg1.Image = frame.Bitmap; //顯示frame
+                    double fps = video.GetCaptureProperty(CapProp.Fps); //抓影片的fps
+                    double time = video.GetCaptureProperty(CapProp.PosMsec) / 1000.0; //抓影片時間
+                    //label1.Text = "Time:" + time.ToString(); //顯示影片時間
+                    //label1.Update();//刷新label
+
+                    Bitmap bitmap_source = (Bitmap)frame.Bitmap;
+
+                    if (bitmap == null)
+                        bitmap = (Bitmap)bitmap_source.Clone();
+
+                    bitmap = bitmap_source;
+
+                    if (bitmap == null)
+                        return;
+
+                    OriginalImg1 = BitmapToEImageC24(ref bitmap);
+
+                    ShowImage(OriginalImg1, pbImg1);
+
+                    GrayImg1.SetSize(OriginalImg1);
+                    EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
+                    EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
+
+                    ShowImage(GrayImg1, pbImg2);
+
+                    await Task.Delay(1000 / Convert.ToInt32(fps)); //延遲
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        private EImageC24 BitmapToEImageC24(ref Bitmap bitmap)
+        {
+            EImageC24 EC24Image1 = null; 
+            try
+            {
+                EC24Image1 = new EImageC24();
+
+                Rectangle rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+                bmpData = bitmap.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadWrite, bitmap.PixelFormat);
+
+                EC24Image1.SetImagePtr(bitmap.Width, bitmap.Height, bmpData.Scan0);
+                bitmap.UnlockBits(bmpData);
+
+            }
+            catch (EException e) //EException為eVision的例外處理
+            {             
+                Console.WriteLine(e.ToString());        
+            }        
+            return EC24Image1;
+        } 
+
+        private void ShowImage(EImageC24 img, PictureBox pb)
+        {
+            try 
+            {
+                Bitmap bmp;
+                bmp = new Bitmap(pb.Width, pb.Height);
+
+                float PictureBoxSizeRatio = (float)pb.Width / pb.Height;
+                float ImageSizeRatio = (float)img.Width / img.Height;
+                if (ImageSizeRatio > PictureBoxSizeRatio)
+                    ScalingRatio = (float)pb.Width / img.Width;
+                else
+                    ScalingRatio = (float)pb.Height / img.Height;
+
+                if(pb.InvokeRequired)
+                {
+                    pb.Invoke(new MethodInvoker(delegate () {
+                        img.Draw(Graphics.FromImage(bmp), ScalingRatio);
+                        pb.Image = bmp;
+                    }));
+                }
+                else
+                {
+                    img.Draw(Graphics.FromImage(bmp), ScalingRatio);
+                    pb.Image = bmp;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        private void ShowImage(EImageBW8 img, PictureBox pb)
+        {
+            try
+            {
+                Bitmap bmp;
+                bmp = new Bitmap(pb.Width, pb.Height);
+
+                float PictureBoxSizeRatio = (float)pb.Width / pb.Height;
+                float ImageSizeRatio = (float)img.Width / img.Height;
+                if (ImageSizeRatio > PictureBoxSizeRatio)
+                    ScalingRatio = (float)pb.Width / img.Width;
+                else
+                    ScalingRatio = (float)pb.Height / img.Height;
+
+                if (pb.InvokeRequired)
+                {
+                    pb.Invoke(new MethodInvoker(delegate () {
+                        img.Draw(Graphics.FromImage(bmp), ScalingRatio);
+                        pb.Image = bmp;
+                    }));
+                }
+                else
+                {
+                    img.Draw(Graphics.FromImage(bmp), ScalingRatio);
+                    pb.Image = bmp;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
         }
     }
 }
