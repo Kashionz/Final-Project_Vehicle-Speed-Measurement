@@ -190,7 +190,9 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 codedImage1ObjectSelection.AddObjects(codedImage1);
                 codedImage1ObjectSelection.AttachedImage = GrayImg1;
                 codedImage1ObjectSelection.RemoveUsingUnsignedIntegerFeature(EFeature.RunCount, 1000, ESingleThresholdMode.Less); //移除RunCount小於1000的物件
-                Console.WriteLine(codedImage1ObjectSelection.ElementCount); //看result的數量
+
+                if(codedImage1ObjectSelection.ElementCount > 0)
+                Console.WriteLine("(" + codedImage1ObjectSelection.GetElement(0).BoundingBoxCenterX + ", " + codedImage1ObjectSelection.GetElement(0).BoundingBoxCenterY + ")");
 
                 codedImage1.DrawFeature(pbImg1.CreateGraphics(), EDrawableFeature.BoundingBox, codedImage1ObjectSelection, ScalingRatio); // 把車的框框畫出來
 
