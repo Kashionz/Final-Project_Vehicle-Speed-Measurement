@@ -19,6 +19,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
     public partial class Form1 : Form
     {
         Form2 settings = new Form2();
+        Form3 videoInfo = new Form3();
 
         EImageC24 OriginalImg1 = new EImageC24(); //eVision的彩色圖像物件
         EImageC24 OriginalImg2 = new EImageC24(); // EImageC24 instance
@@ -32,6 +33,10 @@ namespace Final_Project_Vehicle_Speed_Measurement
         EBW8Vector In = new EBW8Vector(); // EBW8Vector instance
         EBW8Vector Out = new EBW8Vector(); // EBW8Vector instance
 
+        EMatcher EMatcher1 = new EMatcher();
+
+        EROIBW8 EBW8Image1Roi1 = new EROIBW8();
+
         ECodedImage2 codedImage1 = new ECodedImage2(); // ECodedImage2 instance
         EImageEncoder codedImage1Encoder = new EImageEncoder(); // EImageEncoder instance
         EObjectSelection codedImage1ObjectSelection = new EObjectSelection(); // EObjectSelection instance
@@ -40,16 +45,18 @@ namespace Final_Project_Vehicle_Speed_Measurement
         Bitmap bitmap = null;
 
         Capture video;
-        bool play = false;
+        public bool play = false;
+
+        double fps, totalframe, videotime, framecount;
 
         string[] files;
 
         float ScalingRatio = 0; //Picturebox與原始影像大小的縮放比例
         bool selecting = false;
 
-        static Excel.Application Excel_APP1 = new Excel.Application();
-        Excel.Workbook Excel_WB1 = Excel_APP1.Workbooks.Add();
-        Excel.Worksheet Excel_WS1 = new Excel.Worksheet();
+        static Excel.Application Excel_APP1;
+        Excel.Workbook Excel_WB1;
+        Excel.Worksheet Excel_WS1;
 
         public Form1()
         {
@@ -73,14 +80,18 @@ namespace Final_Project_Vehicle_Speed_Measurement
 
         private void excelToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            Excel_APP1 = new Excel.Application();
+            Excel_WB1 = Excel_APP1.Workbooks.Add();
+            Excel_WS1 = new Excel.Worksheet();
+
             saveFileDialog1.Filter = "Excel|*.xlsx";
             saveFileDialog1.Title = "Save a Excel";
 
             Excel_WS1 = Excel_WB1.Worksheets[1];
             Excel_WS1.Name = "Data";
             Excel_APP1.Cells[1, 1] = "圖片(.jpg)";
-            Excel_APP1.Cells[2, 1] = "Profile下";
-            Excel_APP1.Cells[3, 1] = "Profile上";
+            Excel_APP1.Cells[1, 2] = "Profile下";
+            Excel_APP1.Cells[1, 3] = "Profile上";
 
             OriginalImg1.Load(files[0]);
 
@@ -113,18 +124,18 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
                 EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
 
-                EasyImage.Oper(EArithmeticLogicOperation.Subtract, GrayImg1, BackgroundGray, GrayImg1);
-                EasyImage.Threshold(GrayImg1, GrayImg1, 56);
-                EasyImage.OpenBox(GrayImg1, GrayImg1, settings.set_value_3());
-
+                //EasyImage.Oper(EArithmeticLogicOperation.Subtract, GrayImg1, BackgroundGray, GrayImg1);
+                //EasyImage.Threshold(GrayImg1, GrayImg1, 56);
+                //EasyImage.OpenBox(GrayImg1, GrayImg1, settings.set_value_3());
+                
                 GrayImg1.Draw(pbImg2.CreateGraphics(), ScalingRatio);
 
-                EasyImage.ImageToLineSegment(GrayImg1, In, 1000, 600, 1750, 600); //設定偵測線在最底部，判斷車子是否準備進來
-                EasyImage.ImageToLineSegment(GrayImg1, Out, 1000, 500, 1750, 500); //設定偵測線在最頂部，判斷車子是否準備出去
+                EasyImage.ImageToLineSegment(GrayImg1, In, 1485, 700, 1683, 700); //設定車子進入的偵測線，判斷車子是否準備進來
+                EasyImage.ImageToLineSegment(GrayImg1, Out, 1485, 400, 1683, 400); //設定車子出去的偵測線，判斷車子是否準備出去
 
-                Excel_APP1.Cells[1, 2 + i] = Path.GetFileNameWithoutExtension(files[i]);
-                Excel_APP1.Cells[2, 2 + i] = getProfileValuesSum(In);
-                Excel_APP1.Cells[3, 2 + i] = getProfileValuesSum(Out);
+                Excel_APP1.Cells[2 + i, 1] = Path.GetFileNameWithoutExtension(files[i]);
+                Excel_APP1.Cells[2 + i, 2] = getProfileValuesSum(In);
+                Excel_APP1.Cells[2 + i, 3] = getProfileValuesSum(Out);
 
                 //Console.WriteLine(files[i]);
             }
@@ -154,7 +165,6 @@ namespace Final_Project_Vehicle_Speed_Measurement
         private void vehicleToolStripMenuItem_Click(object sender, EventArgs e)
         {
             float PictureBoxSizeRatio, ImageSizeRatio;
-            ECodedElement result;
 
             codedImage1ObjectSelection.FeretAngle = 0.00f;
             codedImage1Encoder.GrayscaleSingleThresholdSegmenter.WhiteLayerEncoded = true;
@@ -367,8 +377,12 @@ namespace Final_Project_Vehicle_Speed_Measurement
             if (openFileDialog1.ShowDialog() == DialogResult.OK)
             {
                 video = new Capture(openFileDialog1.FileName); //讀影片
-                Mat m = video.QueryFrame(); //擷取影片frame
+                Mat m = new Mat();
+                video.Retrieve(m); //擷取影片首個frame
                 pbImg1.Image = m.Bitmap; //顯示該frame，當預覽圖
+                totalframe = video.GetCaptureProperty(CapProp.FrameCount);
+                videoInfo.setValue(totalframe, 0, 0, 0);
+                videoInfo.Show();
             }
         }
 
@@ -392,14 +406,16 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 while (play)
                 {
                     Mat frame = new Mat();
+
                     frame = video.QueryFrame(); //擷取影片frame
+
                     if (frame == null) break;
 
-                    //pbImg1.Image = frame.Bitmap; //顯示frame
-                    double fps = video.GetCaptureProperty(CapProp.Fps); //抓影片的fps
-                    double time = video.GetCaptureProperty(CapProp.PosMsec) / 1000.0; //抓影片時間
-                    //label1.Text = "Time:" + time.ToString(); //顯示影片時間
-                    //label1.Update();//刷新label
+                    pbImg1.Image = frame.Bitmap; //顯示frame
+
+                    fps = video.GetCaptureProperty(CapProp.Fps); //抓影片的fps
+                    videotime = Math.Floor(video.GetCaptureProperty(CapProp.PosMsec)) / 1000; //抓影片時間
+                    framecount = video.GetCaptureProperty(CapProp.PosFrames);
 
                     Bitmap bitmap_source = (Bitmap)frame.Bitmap;
 
@@ -413,13 +429,20 @@ namespace Final_Project_Vehicle_Speed_Measurement
 
                     OriginalImg1 = BitmapToEImageC24(ref bitmap);
 
-                    ShowImage(OriginalImg1, pbImg1);
-
                     GrayImg1.SetSize(OriginalImg1);
                     EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
                     EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
 
                     ShowImage(GrayImg1, pbImg2);
+
+                    bitmap.Dispose();                
+                    System.GC.Collect();
+                    System.GC.WaitForPendingFinalizers();
+
+                    videoInfo.setValue(totalframe, framecount, videotime, fps);
+
+                    if (framecount == totalframe)
+                        break;
 
                     await Task.Delay(1000 / Convert.ToInt32(fps)); //延遲
                 }
@@ -484,6 +507,87 @@ namespace Final_Project_Vehicle_Speed_Measurement
             }
         }
 
+        private async void excelToolStripMenuItem2_Click(object sender, EventArgs e)
+        {
+            Excel_APP1 = new Excel.Application();
+            Excel_WB1 = Excel_APP1.Workbooks.Add();
+            Excel_WS1 = new Excel.Worksheet();
+
+            saveFileDialog1.Filter = "Excel|*.xlsx";
+            saveFileDialog1.Title = "Save a Excel";
+
+            Excel_WS1 = Excel_WB1.Worksheets[1];
+            Excel_WS1.Name = "Data";
+            Excel_APP1.Cells[1, 1] = "圖片(.jpg)";
+            Excel_APP1.Cells[1, 2] = "Profile下";
+            Excel_APP1.Cells[1, 3] = "Profile上";
+
+            try
+            {
+                while (framecount != totalframe)
+                {
+                    Mat frame = new Mat();
+
+                    frame = video.QueryFrame(); //擷取影片frame
+
+                    if (frame == null) break;
+
+                    pbImg1.Image = frame.Bitmap; //顯示frame
+
+                    fps = video.GetCaptureProperty(CapProp.Fps); //抓影片的fps
+                    videotime = Math.Floor(video.GetCaptureProperty(CapProp.PosMsec)) / 1000; //抓影片時間
+                    framecount = video.GetCaptureProperty(CapProp.PosFrames);
+
+                    Bitmap bitmap_source = (Bitmap)frame.Bitmap;
+
+                    if (bitmap == null)
+                        bitmap = (Bitmap)bitmap_source.Clone();
+
+                    bitmap = bitmap_source;
+
+                    if (bitmap == null)
+                        return;
+
+                    OriginalImg1 = BitmapToEImageC24(ref bitmap);
+
+                    GrayImg1.SetSize(OriginalImg1);
+                    EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
+                    EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
+
+                    ShowImage(GrayImg1, pbImg2);
+
+                    EasyImage.ImageToLineSegment(GrayImg1, In, 1485, 700, 1683, 700); //設定車子進入的偵測線，判斷車子是否準備進來
+                    EasyImage.ImageToLineSegment(GrayImg1, Out, 1485, 400, 1683, 400); //設定車子出去的偵測線，判斷車子是否準備出去
+
+                    Excel_APP1.Cells[framecount + 1, 1] = framecount.ToString();
+                    Excel_APP1.Cells[framecount + 1, 2] = getProfileValuesSum(In);
+                    Excel_APP1.Cells[framecount + 1, 3] = getProfileValuesSum(Out);
+
+                    bitmap.Dispose();
+                    System.GC.Collect();
+                    System.GC.WaitForPendingFinalizers();
+
+                    videoInfo.setValue(totalframe, framecount, videotime, fps);
+
+                    await Task.Delay(1000 / Convert.ToInt32(fps)); //延遲
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+
+
+            if (saveFileDialog1.ShowDialog() == DialogResult.OK && saveFileDialog1.FileName != "")
+                Excel_WB1.SaveAs(saveFileDialog1.FileName);
+
+            Excel_WS1 = null;
+            Excel_WB1.Close();
+            Excel_WB1 = null;
+            Excel_APP1.Quit();
+            Excel_APP1 = null;
+        }
+
         private void ShowImage(EImageBW8 img, PictureBox pb)
         {
             try
@@ -514,6 +618,31 @@ namespace Final_Project_Vehicle_Speed_Measurement
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
+            }
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            System.Environment.Exit(0);
+        }
+
+        private void fileToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            float PictureBoxSizeRatio, ImageSizeRatio;
+
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                OriginalImg1.Load(openFileDialog1.FileName);
+                PictureBoxSizeRatio = (float)pbImg1.Width / pbImg1.Height;
+                ImageSizeRatio = (float)OriginalImg1.Width / OriginalImg1.Height;
+                if (ImageSizeRatio > PictureBoxSizeRatio)
+                    ScalingRatio = (float)pbImg1.Width / OriginalImg1.Width;
+                else
+                    ScalingRatio = (float)pbImg1.Height / OriginalImg1.Height;
+
+                //顯示影像於Picturebox
+                pbImg1.Refresh(); //先清除目前圖像
+                OriginalImg1.Draw(pbImg1.CreateGraphics(), ScalingRatio); //再繪製上去
             }
         }
     }
