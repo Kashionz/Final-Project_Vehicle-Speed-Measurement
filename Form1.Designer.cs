@@ -51,6 +51,9 @@
             this.colorConversionToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.grayToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.yIQToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.videoToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.exportToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.excelToolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
             this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
             this.FileListBox = new System.Windows.Forms.ListBox();
             this.pbImg1 = new System.Windows.Forms.PictureBox();
@@ -58,9 +61,7 @@
             this.pbImg3 = new System.Windows.Forms.PictureBox();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
-            this.videoToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.exportToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.excelToolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
+            this.imageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbImg1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbImg2)).BeginInit();
@@ -89,7 +90,7 @@
             this.loadToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(47, 23);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(47, 24);
             this.fileToolStripMenuItem.Text = "File";
             // 
             // openToolStripMenuItem
@@ -170,7 +171,7 @@
             this.selectionToolStripMenuItem,
             this.clearToolStripMenuItem});
             this.detectionToolStripMenuItem.Name = "detectionToolStripMenuItem";
-            this.detectionToolStripMenuItem.Size = new System.Drawing.Size(89, 23);
+            this.detectionToolStripMenuItem.Size = new System.Drawing.Size(89, 24);
             this.detectionToolStripMenuItem.Text = "Detection";
             // 
             // vehicleToolStripMenuItem
@@ -220,7 +221,7 @@
             this.excelToolStripMenuItem,
             this.colorConversionToolStripMenuItem});
             this.exportToolStripMenuItem.Name = "exportToolStripMenuItem";
-            this.exportToolStripMenuItem.Size = new System.Drawing.Size(67, 23);
+            this.exportToolStripMenuItem.Size = new System.Drawing.Size(67, 24);
             this.exportToolStripMenuItem.Text = "Export";
             // 
             // excelToolStripMenuItem
@@ -253,6 +254,31 @@
             this.yIQToolStripMenuItem.Text = "YIQ";
             this.yIQToolStripMenuItem.Click += new System.EventHandler(this.yIQToolStripMenuItem_Click);
             // 
+            // videoToolStripMenuItem1
+            // 
+            this.videoToolStripMenuItem1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.exportToolStripMenuItem1});
+            this.videoToolStripMenuItem1.Name = "videoToolStripMenuItem1";
+            this.videoToolStripMenuItem1.Size = new System.Drawing.Size(64, 24);
+            this.videoToolStripMenuItem1.Text = "Video";
+            // 
+            // exportToolStripMenuItem1
+            // 
+            this.exportToolStripMenuItem1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.excelToolStripMenuItem2,
+            this.imageToolStripMenuItem});
+            this.exportToolStripMenuItem1.Name = "exportToolStripMenuItem1";
+            this.exportToolStripMenuItem1.Size = new System.Drawing.Size(224, 26);
+            this.exportToolStripMenuItem1.Text = "Export";
+            this.exportToolStripMenuItem1.Click += new System.EventHandler(this.exportToolStripMenuItem1_Click);
+            // 
+            // excelToolStripMenuItem2
+            // 
+            this.excelToolStripMenuItem2.Name = "excelToolStripMenuItem2";
+            this.excelToolStripMenuItem2.Size = new System.Drawing.Size(224, 26);
+            this.excelToolStripMenuItem2.Text = "Excel";
+            this.excelToolStripMenuItem2.Click += new System.EventHandler(this.excelToolStripMenuItem2_Click);
+            // 
             // folderBrowserDialog1
             // 
             this.folderBrowserDialog1.HelpRequest += new System.EventHandler(this.folderBrowserDialog1_HelpRequest);
@@ -278,6 +304,7 @@
             this.pbImg1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             this.pbImg1.TabIndex = 2;
             this.pbImg1.TabStop = false;
+            this.pbImg1.MouseUp += new System.Windows.Forms.MouseEventHandler(this.pbImg1_MouseUp);
             // 
             // pbImg2
             // 
@@ -307,28 +334,12 @@
             // 
             this.openFileDialog1.FileName = "openFileDialog1";
             // 
-            // videoToolStripMenuItem1
+            // imageToolStripMenuItem
             // 
-            this.videoToolStripMenuItem1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.exportToolStripMenuItem1});
-            this.videoToolStripMenuItem1.Name = "videoToolStripMenuItem1";
-            this.videoToolStripMenuItem1.Size = new System.Drawing.Size(64, 24);
-            this.videoToolStripMenuItem1.Text = "Video";
-            // 
-            // exportToolStripMenuItem1
-            // 
-            this.exportToolStripMenuItem1.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.excelToolStripMenuItem2});
-            this.exportToolStripMenuItem1.Name = "exportToolStripMenuItem1";
-            this.exportToolStripMenuItem1.Size = new System.Drawing.Size(224, 26);
-            this.exportToolStripMenuItem1.Text = "Export";
-            // 
-            // excelToolStripMenuItem2
-            // 
-            this.excelToolStripMenuItem2.Name = "excelToolStripMenuItem2";
-            this.excelToolStripMenuItem2.Size = new System.Drawing.Size(224, 26);
-            this.excelToolStripMenuItem2.Text = "Excel";
-            this.excelToolStripMenuItem2.Click += new System.EventHandler(this.excelToolStripMenuItem2_Click);
+            this.imageToolStripMenuItem.Name = "imageToolStripMenuItem";
+            this.imageToolStripMenuItem.Size = new System.Drawing.Size(224, 26);
+            this.imageToolStripMenuItem.Text = "Image";
+            this.imageToolStripMenuItem.Click += new System.EventHandler(this.imageToolStripMenuItem_Click);
             // 
             // Form1
             // 
@@ -389,6 +400,7 @@
         private System.Windows.Forms.ToolStripMenuItem videoToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem exportToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem excelToolStripMenuItem2;
+        private System.Windows.Forms.ToolStripMenuItem imageToolStripMenuItem;
     }
 }
 

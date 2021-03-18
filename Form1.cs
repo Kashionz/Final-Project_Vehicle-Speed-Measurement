@@ -27,6 +27,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
         EImageBW8 GrayImg1 = new EImageBW8(); //eVision的灰階圖像物件
         EImageBW8 GrayImg2 = new EImageBW8(); //eVision的灰階圖像物件
         EImageBW8 BackgroundGray = new EImageBW8(); //eVision的灰階圖像物件
+        EImageBW8 GrayImg3 = new EImageBW8(); //eVision的灰階圖像物件
 
         EColorLookup EColorLookup1 = new EColorLookup(); // EColorLookup instance
 
@@ -46,6 +47,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
 
         Capture video;
         public bool play = false;
+        bool firstSet = false;
 
         double fps, totalframe, videotime, framecount;
 
@@ -134,8 +136,8 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 EasyImage.ImageToLineSegment(GrayImg1, Out, 1485, 400, 1683, 400); //設定車子出去的偵測線，判斷車子是否準備出去
 
                 Excel_APP1.Cells[2 + i, 1] = Path.GetFileNameWithoutExtension(files[i]);
-                Excel_APP1.Cells[2 + i, 2] = getProfileValuesSum(In);
-                Excel_APP1.Cells[2 + i, 3] = getProfileValuesSum(Out);
+                Excel_APP1.Cells[2 + i, 2] = getProfileValueSum(In);
+                Excel_APP1.Cells[2 + i, 3] = getProfileValueSum(Out);
 
                 //Console.WriteLine(files[i]);
             }
@@ -148,18 +150,6 @@ namespace Final_Project_Vehicle_Speed_Measurement
             Excel_WB1 = null;
             Excel_APP1.Quit();
             Excel_APP1 = null;
-        }
-
-        private double getProfileValuesSum(EBW8Vector eBW8) //Profile線上的值相加起來
-        {
-            double sum = 0;
-
-            for (int i = 0; i < eBW8.NumElements; i++)
-            {
-                sum += eBW8.GetElement(i).Value;
-            }
-
-            return sum;
         }
 
         private void vehicleToolStripMenuItem_Click(object sender, EventArgs e)
@@ -378,8 +368,9 @@ namespace Final_Project_Vehicle_Speed_Measurement
             {
                 video = new Capture(openFileDialog1.FileName); //讀影片
                 Mat m = new Mat();
-                video.Retrieve(m); //擷取影片首個frame
+                m = video.QueryFrame();
                 pbImg1.Image = m.Bitmap; //顯示該frame，當預覽圖
+                video.SetCaptureProperty(CapProp.PosFrames, 0);
                 totalframe = video.GetCaptureProperty(CapProp.FrameCount);
                 videoInfo.setValue(totalframe, 0, 0, 0);
                 videoInfo.Show();
@@ -407,42 +398,66 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 {
                     Mat frame = new Mat();
 
-                    frame = video.QueryFrame(); //擷取影片frame
+                   
 
                     if (frame == null) break;
 
                     pbImg1.Image = frame.Bitmap; //顯示frame
 
                     fps = video.GetCaptureProperty(CapProp.Fps); //抓影片的fps
-                    videotime = Math.Floor(video.GetCaptureProperty(CapProp.PosMsec)) / 1000; //抓影片時間
+                    videotime = Math.Round(video.GetCaptureProperty(CapProp.PosMsec) / 1000, 3, MidpointRounding.AwayFromZero); //抓影片時間
                     framecount = video.GetCaptureProperty(CapProp.PosFrames);
 
-                    Bitmap bitmap_source = (Bitmap)frame.Bitmap;
-
-                    if (bitmap == null)
-                        bitmap = (Bitmap)bitmap_source.Clone();
-
-                    bitmap = bitmap_source;
-
-                    if (bitmap == null)
-                        return;
+                    refBitmap(frame);
 
                     OriginalImg1 = BitmapToEImageC24(ref bitmap);
 
-                    GrayImg1.SetSize(OriginalImg1);
-                    EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
-                    EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
+                    if (!firstSet)
+                    {
+                        GrayImg1.SetSize(OriginalImg1);
+                        GrayImg3.SetSize(OriginalImg1);
+                        BackgroundGray.SetSize(OriginalImg1);
+                        EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
+                        EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg3);
+                        EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), BackgroundGray);
+                        EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
+                        EasyImage.Convert(OriginalImg1, BackgroundGray); //轉灰階
+                        firstSet = true;
+                    }
+                    else
+                    {
+
+                        EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
+                        //EasyImage.Oper(EArithmeticLogicOperation.Subtract, GrayImg1, BackgroundGray, GrayImg3);
+
+                        //double profilevalue_in = getProfileValueSum(In);
+                        //double profilevalue_out = getProfileValueSum(Out);
+
+                        //if (profilevalue_in < 2500 && profilevalue_out < 2500)
+                        //{
+                        //    Console.WriteLine("Background:" + profilevalue_in);
+                        //    EasyImage.Convert(OriginalImg1, BackgroundGray); //轉灰階
+                        //}
+                        //else
+                        //{
+                        //    Console.WriteLine("有車進入:" + profilevalue_in);
+                        //    EasyImage.Convert(OriginalImg1, BackgroundGray); //轉灰階
+                        //}
+                    }
+
+                    EasyImage.ImageToLineSegment(GrayImg1, In, 968, 585, 1747, 585); //設定車子進入的偵測線，判斷車子是否準備進來
+                    EasyImage.ImageToLineSegment(GrayImg1, Out, 968, 209, 1747, 209); //設定車子出去的偵測線，判斷車子是否準備出去
+
+                    Console.WriteLine(getProfileValueSum(In));
 
                     ShowImage(GrayImg1, pbImg2);
+                    //ShowImage(BackgroundGray, pbImg3);
 
-                    bitmap.Dispose();                
+                    bitmap.Dispose();
                     System.GC.Collect();
                     System.GC.WaitForPendingFinalizers();
 
                     videoInfo.setValue(totalframe, framecount, videotime, fps);
-
-                    if (framecount == totalframe)
-                        break;
 
                     await Task.Delay(1000 / Convert.ToInt32(fps)); //延遲
                 }
@@ -521,7 +536,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
             Excel_APP1.Cells[1, 1] = "圖片(.jpg)";
             Excel_APP1.Cells[1, 2] = "Profile下";
             Excel_APP1.Cells[1, 3] = "Profile上";
-
+            Excel_APP1.Cells[1, 4] = "時間";
             try
             {
                 while (framecount != totalframe)
@@ -535,7 +550,7 @@ namespace Final_Project_Vehicle_Speed_Measurement
                     pbImg1.Image = frame.Bitmap; //顯示frame
 
                     fps = video.GetCaptureProperty(CapProp.Fps); //抓影片的fps
-                    videotime = Math.Floor(video.GetCaptureProperty(CapProp.PosMsec)) / 1000; //抓影片時間
+                    videotime = video.GetCaptureProperty(CapProp.PosMsec) / 1000; //抓影片時間
                     framecount = video.GetCaptureProperty(CapProp.PosFrames);
 
                     Bitmap bitmap_source = (Bitmap)frame.Bitmap;
@@ -554,14 +569,17 @@ namespace Final_Project_Vehicle_Speed_Measurement
                     EasyImage.Oper(EArithmeticLogicOperation.Copy, new EBW8(0), GrayImg1);
                     EasyImage.Convert(OriginalImg1, GrayImg1); //轉灰階
 
+                    EasyImage.ImageToLineSegment(GrayImg1, In, 413, 104, 797, 104); //設定車子進入的偵測線，判斷車子是否準備進來
+                    EasyImage.ImageToLineSegment(GrayImg1, Out, 325, 891, 776, 891); //設定車子出去的偵測線，判斷車子是否準備出去
+
                     ShowImage(GrayImg1, pbImg2);
 
-                    EasyImage.ImageToLineSegment(GrayImg1, In, 1485, 700, 1683, 700); //設定車子進入的偵測線，判斷車子是否準備進來
-                    EasyImage.ImageToLineSegment(GrayImg1, Out, 1485, 400, 1683, 400); //設定車子出去的偵測線，判斷車子是否準備出去
+                    //Console.WriteLine("In:" + getProfileValueSum(In) + " / " + "Out:" + getProfileValueSum(Out) + " / " + "Time:" + videotime);
 
                     Excel_APP1.Cells[framecount + 1, 1] = framecount.ToString();
-                    Excel_APP1.Cells[framecount + 1, 2] = getProfileValuesSum(In);
-                    Excel_APP1.Cells[framecount + 1, 3] = getProfileValuesSum(Out);
+                    Excel_APP1.Cells[framecount + 1, 2] = getProfileValueSum(In);
+                    Excel_APP1.Cells[framecount + 1, 3] = getProfileValueSum(Out);
+                    Excel_APP1.Cells[framecount + 1, 4] = videotime;
 
                     bitmap.Dispose();
                     System.GC.Collect();
@@ -626,6 +644,21 @@ namespace Final_Project_Vehicle_Speed_Measurement
             System.Environment.Exit(0);
         }
 
+        private void exportToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void imageToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pbImg1_MouseUp(object sender, MouseEventArgs e)
+        {
+
+        }
+
         private void fileToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             float PictureBoxSizeRatio, ImageSizeRatio;
@@ -644,6 +677,30 @@ namespace Final_Project_Vehicle_Speed_Measurement
                 pbImg1.Refresh(); //先清除目前圖像
                 OriginalImg1.Draw(pbImg1.CreateGraphics(), ScalingRatio); //再繪製上去
             }
+        }
+
+        private double getProfileValueSum(EBW8Vector eBW8) //Profile線上的值相加起來
+        {
+            double sum = 0;
+            for (int i = 0; i < eBW8.NumElements; i++)
+            {
+
+                sum += eBW8.GetElement(i).Value;
+            }
+            return sum;
+        }
+
+        public void refBitmap(Mat frame)
+        {
+            Bitmap bitmap_source = (Bitmap)frame.Bitmap;
+
+            if (bitmap == null)
+                bitmap = (Bitmap)bitmap_source.Clone();
+
+            bitmap = bitmap_source;
+
+            if (bitmap == null)
+                return;
         }
     }
 }
